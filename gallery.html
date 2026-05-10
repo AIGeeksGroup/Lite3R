@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Depth Anything 3 Gallery</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    :root { --gap:16px; --card-radius:14px; --shadow:0 8px 24px rgba(0,0,0,.08); --maxW:1036px; }
+    html, body { margin:0; padding:0; font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f6f6f8; color:#1f2937; }
+    header { position:sticky; top:0; z-index:10; background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.8)); backdrop-filter: blur(10px); border-bottom:1px solid rgba(0,0,0,.06); }
+    .hdr-row { display:flex; align-items:center; gap:12px; padding:14px 18px; flex-wrap:wrap; }
+    h1 { margin:0; font-size:18px; font-weight:700; letter-spacing:.2px; }
+    .search { flex:1 1 260px; min-width:220px; max-width:520px; padding:8px 12px; border:1px solid rgba(0,0,0,.12); border-radius:10px; outline:none; }
+    .search:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    .ctl-btn{ padding:6px 10px; border-radius:10px; border:1px solid rgba(0,0,0,.12); background:#fff; cursor:pointer; }
+    .file-input{ display:none; }
+
+    main { padding:18px; display:grid; place-items:center; }
+    .grid { width:min(1200px,100%); display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:var(--gap); }
+    .card { background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:var(--card-radius); overflow:hidden; box-shadow:var(--shadow); transition:.2s ease; cursor:pointer; display:flex; flex-direction:column; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,.12); }
+    .thumb-box { position:relative; width:100%; aspect-ratio: 2 / 1; background:linear-gradient(135deg,#eef2ff,#f1f5f9); display:grid; place-items:center; overflow:hidden; }
+    .thumb { width:100%; height:100%; object-fit:cover; display:block; }
+    .meta { padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .title { font-weight:600; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .open { font-size:12px; opacity:.75; padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,.1); background:#fff; }
+
+    .pager { display:flex; align-items:center; justify-content:center; gap:10px; padding:14px; opacity:.9; }
+    .pager button { padding:6px 10px; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#fff; cursor:pointer; }
+    .pager button:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* Overlay */
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; place-items:center; padding:20px; z-index:100; }
+    .overlay.show{ display:grid; }
+    .viewer{ inline-size:min(92vw,var(--maxW)); block-size:min(92vh,900px); background:#fff; border-radius:16px; overflow:hidden; position:relative; box-shadow:0 20px 40px rgba(0,0,0,.25); display:grid; grid-template-rows:auto 1fr; }
+    .viewer-header{ display:flex; align-items:center; gap:8px; padding:8px; background:rgba(255,255,255,.9); border-bottom:1px solid rgba(0,0,0,.08); }
+    .chip{ background:#f1f5f9; border:1px solid rgba(0,0,0,.08); color:#1f2937; padding:6px 10px; border-radius:12px; font-size:12px; max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .btn{ margin-left:auto; background:#fff; color:#1f2937; border:1px solid rgba(0,0,0,.12); border-radius:10px; padding:6px 10px; cursor:pointer; }
+    .btn + .btn { margin-left:0; }
+    /* .viewer-body{ display:grid; grid-template-columns: 1.4fr 1fr; gap:10px; padding:10px; height:100%; } */
+    /* Original: grid-template-columns: 1.4fr 1fr; changed to top-bottom layout */
+    .viewer-body {
+    display: grid;
+    grid-template-rows: auto auto; /* Two adaptive blocks top and bottom */
+    gap: 10px;
+    padding: 10px;
+    height: 100%;
+    overflow: auto; /* Allow the entire viewer-body to scroll */
+    }
+
+
+    /* model-viewer top-level interactive */
+    /* .mv-box model-viewer { pointer-events: auto; } */
+
+    /* If there are custom overlay layers, they don't intercept (uncomment as needed) */
+    /* .mv-box > *:not(model-viewer) { pointer-events: none; } */
+
+    /* overlay background receives clicks, but internal viewer interacts normally */
+    /* .overlay { pointer-events: auto; }
+    .viewer  { pointer-events: auto; } */
+
+
+    /* model-viewer box (based on your existing viewer styles) */
+    .mv-box { position: relative; width:100%; aspect-ratio: 1036 / 518; background-color:#fff; border:1px solid rgba(0,0,0,.1); border-radius:12px; overflow:hidden; }
+    model-viewer { width:100%; height:100%; display:block; background-color:#fff; }
+    /* .mv-badge { position:absolute; left:12px; bottom:12px; z-index:5; display:none; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.25); overflow:hidden; }
+    .mv-badge img { display:block; width:100%; height:auto; }
+    .mv-badge:hover { transform: scale(1.02); } */
+
+    /* depth grid */
+    .res-panel{ display:grid; grid-template-rows:auto 1fr auto; gap:8px; }
+    .res-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .res-cell{ position:relative; width:100%; aspect-ratio:2/1; background:#f8fafc; border:1px solid rgba(0,0,0,.1); border-radius:12px; overflow:hidden; display:grid; place-items:center; }
+    .res-img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+    .res-empty{ position:absolute; inset:0; display:grid; place-items:center; opacity:.55; font-size:12px; color:#64748b; }
+
+    /* depth pager */
+    .res-pager { display:flex; align-items:center; justify-content:center; gap:10px; }
+    .res-pager button { padding:6px 10px; border-radius:8px; border:1px solid rgba(0,0,0,.12); background:#fff; cursor:pointer; }
+    .res-pager button:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* dark mode */
+    @media (prefers-color-scheme: dark) {
+      html, body { background:#0b0d12; color:#e5e7eb; }
+      header { background: linear-gradient(180deg,rgba(11,13,18,.9),rgba(11,13,18,.7)); border-bottom:1px solid rgba(255,255,255,.08); }
+      .card { background:#0f1320; border:1px solid rgba(255,255,255,.08); box-shadow:none; }
+      .thumb-box { background:linear-gradient(135deg,#0f172a,#111827); }
+      .open { background:#0f1320; border:1px solid rgba(255,255,255,.12); color:#e5e7eb; }
+      .overlay{ background:rgba(0,0,0,.65); }
+      .viewer{ background:#0f1320; }
+      .viewer-header{ background:rgba(15,19,32,.9); border-bottom:1px solid rgba(255,255,255,.08); }
+      .chip{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:#e5e7eb; }
+      .btn{ background:#0f1320; color:#e5e7eb; border:1px solid rgba(255,255,255,.12); }
+      .mv-box{ background:#0b0d12; border:1px solid rgba(255,255,255,.12); }
+      model-viewer{ background:#0b0d12; }
+      .res-cell{ background:#0f172a; border:1px solid rgba(255,255,255,.12); }
+      .res-empty{ color:#9aa0a6; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hdr-row">
+      <h1>Depth Anything 3 Gallery</h1>
+      <input id="search" class="search" placeholder="Search scene name..." />
+      <label class="ctl-btn" for="dirInput" id="dirLabel" style="display:none;">Load Local Directory</label>
+      <input id="dirInput" class="file-input" type="file" webkitdirectory directory multiple />
+    </div>
+  </header>
+
+  <main>
+    <div id="grid" class="grid"></div>
+    <div class="pager">
+      <button id="prevBtn">← Previous</button>
+      <span id="pageInfo">1 / 1</span>
+      <button id="nextBtn">Next →</button>
+    </div>
+  </main>
+
+  <!-- Overlay viewer -->
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-label="3D Preview">
+    <div class="viewer">
+      <div class="viewer-header">
+        <div id="viewerTitle" class="chip">Loading…</div>
+        <!-- <button id="toggleView" class="btn" title="Switch 3D / Resources">Resource View</button> -->
+        <button id="closeBtn" class="btn">Close</button>
+      </div>
+      <div class="viewer-body">
+        <div class="mv-box">
+          <model-viewer id="mv"
+            src=""
+            alt="3D Model Preview"
+            ar
+            camera-controls
+            auto-rotate
+            exposure="1.0"
+            shadow-intensity="0.6"
+            environment-image="neutral">
+          </model-viewer>
+          <!-- Bottom left corner badge (controlled by JS) -->
+          <!-- <a id="badgeWrap" class="mv-badge" href="#" target="_blank" rel="noopener" aria-label="badge link">
+            <img id="badgeImg" src="" alt="badge" />
+          </a> -->
+        </div>
+        <div class="res-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="chip" style="max-width:none;">Depth Map Preview</div>
+            <div class="chip" id="depthCount">0 images</div>
+          </div>
+          <div id="resGrid" class="res-grid"></div>
+          <div class="res-pager">
+            <button id="resPrev">← Previous</button>
+            <span id="resInfo">1 / 1</span>
+            <button id="resNext">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">© 2025 Depth Anything 3 Gallery</footer>
+
+<script>
+  // ---------------- Configuration and Constants ----------------
+  const ROOT = 'assets/3dmodels/';    // Fixed root directory
+  const PER_PAGE = 12;                // Number of cards displayed per page in gallery
+  const DEPTH_PER_PAGE = 2;           // Number of depth images per page in overlay
+  const BADGE_CLICKABLE = false;      // Whether badge is clickable (does not block dragging when false)
+  const IMAGE_EXTS = new Set(['.png','.jpg','.jpeg','.webp','.bmp']);
+
+  // ---------------- State ----------------
+  let ITEMS = [];               // {id,title,model,thumbnail,depth_images}
+  let filtered = [];
+  let page = 1;
+  let currentItem = null;
+  let depthPage = 1;
+
+  // ---------------- DOM ----------------
+  const els = {
+    grid: document.getElementById('grid'),
+    search: document.getElementById('search'),
+    prevBtn: document.getElementById('prevBtn'),
+    nextBtn: document.getElementById('nextBtn'),
+    pageInfo: document.getElementById('pageInfo'),
+
+    overlay: document.getElementById('overlay'),
+    viewerTitle: document.getElementById('viewerTitle'),
+    mv: document.getElementById('mv'),
+    // badgeWrap: document.getElementById('badgeWrap'),
+    badgeImg: document.getElementById('badgeImg'),
+    // toggleView: document.getElementById('toggleView'),
+    closeBtn: document.getElementById('closeBtn'),
+
+    resGrid: document.getElementById('resGrid'),
+    resPrev: document.getElementById('resPrev'),
+    resNext: document.getElementById('resNext'),
+    resInfo: document.getElementById('resInfo'),
+    depthCount: document.getElementById('depthCount'),
+
+    dirInput: document.getElementById('dirInput'),
+    dirLabel: document.getElementById('dirLabel'),
+  };
+
+  // ---------------- Utilities ----------------
+  const extOf = (name) => {
+    const i = name.lastIndexOf('.');
+    return i>=0 ? name.slice(i).toLowerCase() : '';
+  };
+  function normalizeItemsFromManifest(list) {
+    // Concatenate fixed paths based on scene names
+    return (list || []).map(scene => {
+      const id = scene;
+      const base = ROOT + id + '/';
+      const depthDir = base + 'depth_vis/';
+      // Depth images are consecutively numbered as 0000.jpg, adjust the quantity limit as needed
+      const depth_images = [];
+      for (let k=0;k<999;k++){
+        const fname = String(k).padStart(4,'0') + '.jpg';
+        // Don't know the specific quantity, infer URLs here, request on demand when actually loading
+        depth_images.push(depthDir + fname);
+      }
+      return {
+        id, title: id,
+        model: base + 'scene.glb',
+        thumbnail: base + 'scene.jpg',
+        depth_images, // Note: If some numbers don't exist, loading will result in 404, which doesn't affect the display of other images
+      };
+    });
+  }
+
+  // ---------------- Data Loading: Method 1 (From manifest) ----------------
+  async function tryLoadFromManifest() {
+    try {
+      const resp = await fetch(ROOT + 'index.json', {cache:'no-store'});
+      if (!resp.ok) throw new Error('manifest not found');
+      const j = await resp.json();
+      // Expected structure: { "scenes": ["abc","def", ...] }
+      const scenes = j.scenes || [];
+      if (!scenes.length) throw new Error('empty scenes');
+      ITEMS = normalizeItemsFromManifest(scenes);
+      return true;
+    } catch (e) {
+      console.warn('[info] manifest not available:', e.message || e);
+      return false;
+    }
+  }
+
+  // ---------------- Data Loading: Method 2 (Local directory selection) ----------------
+  function showLocalLoader() {
+    els.dirLabel.style.display = '';
+  }
+  async function loadFromDirectory(fileList) {
+    // Parse webkitRelativePath, build scenes
+    const files = Array.from(fileList).filter(f => f instanceof File);
+    const groups = new Map(); // scene -> { glb, jpg, depth: [] }
+    for (const f of files) {
+      const rel = f.webkitRelativePath || f.name;
+      // Expected structure: assets/3dmodels/{scene}/...
+      const segs = rel.split('/').filter(Boolean);
+      const idxRoot = segs.indexOf('assets') === -1 ? 0 : segs.indexOf('assets'); // Tolerate different root selections
+      const baseSegs = segs.slice(idxRoot);
+      // assets/3dmodels/{scene}/xxx
+      if (baseSegs[0] !== 'assets' || baseSegs[1] !== '3dmodels' || baseSegs.length < 4) continue;
+      const scene = baseSegs[2];
+      const tail = baseSegs.slice(3);
+      if (!groups.has(scene)) groups.set(scene, { glb:null, jpg:null, depth:[] });
+      const g = groups.get(scene);
+      const name = tail[tail.length-1];
+      if (name === 'scene.glb') g.glb = f;
+      else if (name === 'scene.jpg') g.jpg = f;
+      else if (tail[0] === 'depth_vis' && IMAGE_EXTS.has(extOf(name))) g.depth.push(f);
+    }
+    const items = [];
+    for (const [scene, g] of groups.entries()) {
+      if (!(g.glb && g.jpg)) continue;
+      const modelURL = URL.createObjectURL(g.glb);
+      const thumbURL = URL.createObjectURL(g.jpg);
+      const depthURLs = g.depth
+        .sort((a,b)=>a.name.localeCompare(b.name))
+        .map(f => URL.createObjectURL(f));
+      items.push({
+        id: scene, title: scene,
+        model: modelURL, thumbnail: thumbURL,
+        depth_images: depthURLs,
+      });
+    }
+    ITEMS = items.sort((a,b)=>a.id.localeCompare(b.id));
+  }
+
+  // ---------------- Gallery Rendering ----------------
+  function buildCard(it){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.title = it.title;
+
+    const thumbBox = document.createElement('div');
+    thumbBox.className = 'thumb-box';
+    const img = document.createElement('img');
+    img.className = 'thumb'; img.loading='lazy';
+    img.src = it.thumbnail; img.alt = it.title;
+    thumbBox.appendChild(img);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const title = document.createElement('div');
+    title.className = 'title'; title.textContent = it.title;
+    const open = document.createElement('div');
+    open.className = 'open'; open.textContent = 'Open';
+    meta.appendChild(title); meta.appendChild(open);
+
+    card.appendChild(thumbBox); card.appendChild(meta);
+    card.onclick = ()=>openOverlay(it);
+    return card;
+  }
+
+  function renderGallery(){
+    filtered = ITEMS.filter(it => (it.title||'').toLowerCase().includes(els.search.value.trim().toLowerCase()));
+    els.grid.innerHTML = '';
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+    page = Math.min(Math.max(1, page), totalPages);
+    const start = (page-1) * PER_PAGE;
+    const subset = filtered.slice(start, start+PER_PAGE);
+    for (const it of subset) els.grid.appendChild(buildCard(it));
+    els.pageInfo.textContent = `${page} / ${totalPages}`;
+    els.prevBtn.disabled = page <= 1;
+    els.nextBtn.disabled = page >= totalPages;
+  }
+
+  // ---------------- Overlay Viewer ----------------
+//   async function forceReloadModel(url) {
+//     const mv = els.mv; // Your <model-viewer> reference
+//     // 1) Clear src, release old context
+//     mv.src = '';
+//     // 2) Wait for one frame, let browser complete unloading
+//     await new Promise(requestAnimationFrame);
+//     // 3) Set new address again (even the same one, equivalent to forced reload)
+//     mv.src = url;
+//   }
+
+  function openOverlay(it){
+    currentItem = it;
+    depthPage = 1;
+
+    // Title
+    els.viewerTitle.textContent = it.title;
+
+    // Model
+    els.mv.src = it.model;
+
+//     // Set initial state before showing overlay
+//   els.overlay.classList.add('show');
+//   // Key: Force reload GLB
+//   await forceReloadModel(it.model);
+
+    // // Badge (bottom left corner)
+    // if (it.thumbnail) {
+    //   els.badgeImg.src = it.thumbnail;
+    //   els.badgeWrap.style.display = 'block';
+    //   els.badgeWrap.style.width = '120px';
+    //   els.badgeWrap.style.opacity = '0.95';
+    //   if (BADGE_CLICKABLE) {
+    //     els.badgeWrap.style.pointerEvents = 'auto';
+    //   } else {
+    //     els.badgeWrap.style.pointerEvents = 'none';
+    //     els.badgeWrap.removeAttribute('href');
+    //   }
+    // } else {
+    //   els.badgeWrap.style.display = 'none';
+    //   els.badgeWrap.removeAttribute('href');
+    // }
+
+    // Depth images
+    renderDepthGrid();
+
+    // Show overlay
+    els.overlay.classList.add('show');
+
+    // Force redraw + resize
+    requestAnimationFrame(() => {
+        // Method A: Trigger resize event
+        window.dispatchEvent(new Event('resize'));
+        // Method B: Toggle attributes to make model-viewer recalculate
+        const old = els.mv.getAttribute('exposure') || '1.0';
+        els.mv.setAttribute('exposure', String(parseFloat(old) + 0.0001));
+        els.mv.setAttribute('exposure', old);
+        // // Method C (sometimes effective): toggle camera-controls
+        // els.mv.removeAttribute('camera-controls');
+        // els.mv.setAttribute('camera-controls', '');
+    });
+  }
+
+  function renderDepthGrid(){
+    const imgs = currentItem?.depth_images || [];
+    const total = imgs.length;
+    const totalPages = Math.max(1, Math.ceil(total / DEPTH_PER_PAGE));
+    depthPage = Math.min(Math.max(1, depthPage), totalPages);
+
+    els.depthCount.textContent = `${total} images`;
+    els.resGrid.innerHTML = '';
+
+    const start = (depthPage - 1) * DEPTH_PER_PAGE;
+    const subset = imgs.slice(start, start + DEPTH_PER_PAGE);
+
+    for (let k=0; k<DEPTH_PER_PAGE; k++){
+      const cell = document.createElement('div');
+      cell.className = 'res-cell';
+      if (subset[k]) {
+        const im = document.createElement('img');
+        im.className = 'res-img';
+        im.loading = 'lazy';
+        im.src = subset[k];
+        im.alt = `${currentItem.title} depth ${start + k + 1}`;
+        cell.appendChild(im);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'res-empty';
+        ph.textContent = 'N/A';
+        cell.appendChild(ph);
+      }
+      els.resGrid.appendChild(cell);
+    }
+
+    els.resInfo.textContent = `${depthPage} / ${totalPages}`;
+    els.resPrev.disabled = depthPage <= 1;
+    els.resNext.disabled = depthPage >= totalPages;
+  }
+
+  function closeOverlay(){
+    els.overlay.classList.remove('show');
+    els.mv.src = '';
+    currentItem = null;
+
+    // Ensure there are no remaining overlay layers (if you had badge/other overlays)
+    const blockers = document.querySelectorAll('.mv-badge, .download-icon, .mask, .cover');
+    blockers.forEach(el => {
+        el.style.pointerEvents = 'none';
+    });
+  }
+
+//   function toggleView(){
+//     // Hide/show right resource panel
+//     const panel = document.querySelector('.res-panel');
+//     const hidden = panel.hasAttribute('hidden');
+//     if (hidden) {
+//       panel.removeAttribute('hidden');
+//       els.toggleView.textContent = 'Resource View';
+//     } else {
+//       panel.setAttribute('hidden','');
+//       els.toggleView.textContent = '3D Only';
+//     }
+//   }
+
+  // ---------------- Event Bindings ----------------
+  els.prevBtn.onclick = ()=>{ page--; renderGallery(); };
+  els.nextBtn.onclick = ()=>{ page++; renderGallery(); };
+  els.search.oninput = ()=>{
+    page = 1; renderGallery();
+  };
+
+  els.overlay.addEventListener('click', (e)=>{ if (e.target === els.overlay) closeOverlay(); });
+  els.closeBtn.onclick = closeOverlay;
+//   els.toggleView.onclick = toggleView;
+  els.resPrev.onclick = ()=>{ depthPage--; renderDepthGrid(); };
+  els.resNext.onclick = ()=>{ depthPage++; renderDepthGrid(); };
+
+  els.dirInput.addEventListener('change', async (e)=>{
+    const flist = e.target.files;
+    if (flist && flist.length){
+      await loadFromDirectory(flist);
+      page = 1;
+      renderGallery();
+    }
+  });
+
+  // ---------------- Initialization: Try to load from manifest first ----------------
+  (async function init(){
+    const ok = await tryLoadFromManifest();
+    if (!ok) {
+      // Prompt user to select local directory (supported in Chrome/Edge/Safari)
+      showLocalLoader();
+    }
+    // Render gallery if manifest loaded successfully or ITEMS loaded from directory later
+    renderGallery();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #f6f6f6;
+      }
+      model-viewer {
+        width: 100%;
+        height: 100%;
+        background-color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 支持手势、自动旋转、环境光、曝光等 -->
+    <model-viewer
+      id="mv"
+      src="./models/your-model.glb"
+      alt="3D 模型预览"
+      ar
+      camera-controls
+      exposure="1.0"
+      shadow-intensity="0.6"
+      environment-image="neutral"
+    ></model-viewer>
+    <!-- <model-viewer
+      id="mv"
+      src="./models/your-model.glb"
+      alt="3D 模型预览"
+      ar
+      camera-controls
+      auto-rotate
+      exposure="1.0"
+      shadow-intensity="0.6"
+      environment-image="neutral"
+    ></model-viewer> -->
+
+    <script>
+      // 可选：从 URL 读取模型地址参数 ?src=xxx.glb
+      const params = new URLSearchParams(location.search);
+      const src = params.get('src');
+      if (src) document.getElementById('mv').setAttribute('src', src);
+    </script>
+  </body>
+</html>

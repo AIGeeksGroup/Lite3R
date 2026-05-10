@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <style>
+        /* Placeholder background for missing thumbnail images */
+        .thumbnail-item img[src*="placeholder"] {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            object-fit: cover;
+        }
+
+        .thumbnail-item img {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        iframe {
+        border-radius: 0.5em;
+        width: 27.5em;
+        height: 27.5em;
+        border: none;
+        box-shadow: 0 0 1em 0em rgba(0, 0, 0, 0.15);
+        }
+        @media (max-width: 768px) {
+        iframe {
+            width: 100%;
+            height: 30em;
+        }
+        }
+
+        #architecture-img {
+        width: 90%;
+        margin: 0 auto;
+        display: block;
+        border: none;
+        border-radius: 0; /* removed border radius */
+        box-shadow: none; /* removed box shadow */
+        }
+
+    </style>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Lite3R</h2>
+            </div>
+            <div class="nav-links">
+                <a href="#top">Top</a>
+                <a href="#overview">Abstract</a>
+                <a href="#interactive-examples">Visualization</a>
+                <a href="#method">Method</a>
+                <a href="#results">Results</a>
+                <a href="#component-ablation">Ablation</a>
+                <a href="#adaptation-sensitivity">Sensitivity</a>
+                <a href="#citation">Citation</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Banner 区域 -->
+    <section id="top" class="banner">
+        <div class="banner-content">
+            <div class="banner-text">
+                <h2 class="banner-title">Lite3R</h2>
+                <h3 class="banner-subtitle">A Model-Agnostic Framework for Efficient<br>Feed-Forward 3D Reconstruction</h3>
+                <div class="authors">
+                    Haoyu Zhang<sup>1*</sup>&nbsp;&nbsp;&nbsp;
+                    <a href="https://steve-zeyu-zhang.github.io/" target="_blank">Zeyu Zhang<sup>1*&dagger;</sup></a>&nbsp;&nbsp;&nbsp;
+                    Zedong Zhou<sup>1</sup>&nbsp;&nbsp;&nbsp;
+                    Yang Zhao<sup>2</sup>&nbsp;&nbsp;&nbsp;
+                    <a href="https://ha0tang.github.io/" target="_blank">Hao Tang<sup>1&ddagger;</sup></a>
+                    <br>
+                    <span><sup>1</sup>Peking University&nbsp;&nbsp;&nbsp;<sup>2</sup>La Trobe University</span>
+                    <br>
+                    <small><sup>*</sup>Equal contribution. <sup>&dagger;</sup>Project lead. <sup>&ddagger;</sup>Corresponding author</small>
+                </div>
+
+                <div class="banner-links">
+                    <a href="https://arxiv.org/abs/" target="_blank" class="link-btn">
+                        <i class="fas fa-file-pdf"></i> Paper
+                    </a>
+                    <a href="https://github.com/AIGeeksGroup/Lite3R" target="_blank" class="link-btn">
+                        <i class="fab fa-github"></i> Code
+                    </a>
+                    <a href="https://huggingface.co/AIGeeksGroup/Lite3R" target="_blank" class="link-btn">
+                        <i class="fas fa-rocket"></i> Model
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Abstract -->
+    <section id="overview" class="abstract" style="text-align: left;">
+        <div class="container">
+            <div class="abstract-content" style="text-align: left;">
+                <h3><i class="fas fa-file-alt"></i> Abstract</h3>
+                <p>Transformer-based 3D reconstruction has emerged as a powerful paradigm for recovering geometry and appearance from multi-view observations, offering strong performance across challenging visual conditions. As these models scale to larger backbones and higher-resolution inputs, improving their efficiency becomes increasingly important for practical deployment. However, modern 3D transformer pipelines face two coupled challenges: dense multi-view attention creates substantial token-mixing overhead, and low-precision execution can destabilize geometry-sensitive representations and degrade depth, pose, and 3D consistency. To address the first challenge, we propose <strong>Lite3R</strong>, a model-agnostic teacher-student framework that replaces dense attention with Sparse Linear Attention to preserve important geometric interactions while reducing attention cost. To address the second challenge, we introduce a parameter-efficient FP8-aware quantization-aware training (FP8-aware QAT) strategy with partial attention distillation, which freezes the vast majority of pretrained backbone parameters and trains only lightweight linear-branch projection layers, enabling stable low-precision deployment while retaining pretrained geometric priors. We further evaluate Lite3R on two representative backbones, VGGT and DA3-Large, over BlendedMVS and DTU64, showing that it substantially reduces latency (1.7-2.0&times;) and memory usage (1.9-2.4&times;) while preserving competitive reconstruction quality overall. These results demonstrate that Lite3R provides an effective algorithm-system co-design approach for practical transformer-based 3D reconstruction.</p>
+                <div class="abstract-visuals">
+                    <img class="head-figure" src="asset/images/headfig_page.jpg" alt="Reconstructed scene from multiple views">
+                    <div class="metric-charts" aria-label="Lite3R efficiency comparison charts">
+                        <div class="metric-card">
+                            <div class="chart-panel">
+                                <div class="chart-title">Inference Latency on<br>BlendedMVS</div>
+                                <div class="chart-legend">
+                                    <span><i class="legend-original"></i>Original</span>
+                                    <span><i class="legend-lite3r"></i><strong>Lite3R</strong></span>
+                                </div>
+                                <div class="bar-chart latency-chart">
+                                    <div class="bar-group">
+                                        <div class="bars">
+                                            <div class="bar original" style="--bar-height: 80.5%;"><span>483</span></div>
+                                            <div class="bar lite3r" style="--bar-height: 45.7%;"><span>274</span></div>
+                                        </div>
+                                        <div class="bar-label">VGGT</div>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bars">
+                                            <div class="bar original" style="--bar-height: 31.2%;"><span>187</span></div>
+                                            <div class="bar lite3r" style="--bar-height: 15.8%;"><span>95</span></div>
+                                        </div>
+                                        <div class="bar-label">DA3-Large</div>
+                                    </div>
+                                </div>
+                                <div class="chart-axis">Latency (ms)</div>
+                            </div>
+                            <div class="metric-callout">1.7~2.0&times;<br>Faster</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="chart-panel">
+                                <div class="chart-title">Memory Footprint on<br>BlendedMVS</div>
+                                <div class="chart-legend">
+                                    <span><i class="legend-original"></i>Original</span>
+                                    <span><i class="legend-lite3r"></i><strong>Lite3R</strong></span>
+                                </div>
+                                <div class="bar-chart memory-chart">
+                                    <div class="bar-group">
+                                        <div class="bars">
+                                            <div class="bar original" style="--bar-height: 81.5%;"><span>5706</span></div>
+                                            <div class="bar lite3r" style="--bar-height: 35.1%;"><span>2455</span></div>
+                                        </div>
+                                        <div class="bar-label">VGGT</div>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bars">
+                                            <div class="bar original" style="--bar-height: 38.8%;"><span>2713</span></div>
+                                            <div class="bar lite3r" style="--bar-height: 19.5%;"><span>1368</span></div>
+                                        </div>
+                                        <div class="bar-label">DA3-Large</div>
+                                    </div>
+                                </div>
+                                <div class="chart-axis">Memory (MB)</div>
+                            </div>
+                            <div class="metric-callout">1.9~2.4&times;<br>Memory<br>Saved</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+     <section id="interactive-examples" class="interactive-results">
+        <div class="container">
+          <h2 class="section-title">Visualization</h2>
+          
+          <!-- Main Display Area -->
+          <div class="scene-viewer-grid">
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label">GT</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="gt" src="html/embedded-ornate-facade-gt-viewer.html"></iframe>
+              </div>
+            </div>
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label lite-label">Lite3R (VGGT)</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="lite3r-vggt" src="html/embedded-ornate-facade-lite3r-vggt-viewer.html"></iframe>
+              </div>
+            </div>
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label lite-label">Lite3R (DA3-L)</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="lite3r-da3l" src="html/embedded-ornate-facade-lite3r-da3l-viewer.html"></iframe>
+              </div>
+            </div>
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label">QuantVGGT</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="quantvggt" src="html/embedded-ornate-facade-quantvggt-viewer.html"></iframe>
+              </div>
+            </div>
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label">VGGT</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="vggt" src="html/embedded-ornate-facade-vggt-viewer.html"></iframe>
+              </div>
+            </div>
+            <div class="scene-viewer-card">
+              <div class="scene-viewer-label">DA3-L</div>
+              <div class="scene-viewer-window">
+                <iframe class="scene-viewer-iframe" data-viewer-kind="da3l" src="html/embedded-ornate-facade-da3l-viewer.html"></iframe>
+              </div>
+            </div>
+          </div>
+          
+          <div class="scene-input-title">GT Views</div>
+          <div class="scene-image-strip" aria-label="Input views for Ornate Facade">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000000.jpg" alt="Ornate Facade input view 1">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000027.jpg" alt="Ornate Facade input view 2">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000055.jpg" alt="Ornate Facade input view 3">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000082.jpg" alt="Ornate Facade input view 4">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000109.jpg" alt="Ornate Facade input view 5">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000136.jpg" alt="Ornate Facade input view 6">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000164.jpg" alt="Ornate Facade input view 7">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000191.jpg" alt="Ornate Facade input view 8">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000218.jpg" alt="Ornate Facade input view 9">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000245.jpg" alt="Ornate Facade input view 10">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000273.jpg" alt="Ornate Facade input view 11">
+            <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000300.jpg" alt="Ornate Facade input view 12">
+          </div>
+
+          <!-- Thumbnail Gallery -->
+          <div class="thumbnail-gallery">
+            <div class="thumbnail-item active" 
+                 data-scene="01_ornate_facade"
+                 data-src="html/embedded-ornate-facade-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/01_ornate_facade/images/00000000.jpg" alt="Ornate Facade" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Ornate Facade</div>
+            </div>
+
+            <div class="thumbnail-item" 
+                 data-scene="02_curved_roof_plaza"
+                 data-src="html/embedded-curved-roof-plaza-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/02_curved_roof_plaza/images/00000000.jpg" alt="Curved Roof Plaza" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Curved Roof Plaza</div>
+            </div>
+
+            <div class="thumbnail-item" 
+                 data-scene="03_temple_complex"
+                 data-src="html/embedded-temple-complex-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/03_temple_complex/images/00000000.jpg" alt="Temple Complex" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Temple Complex</div>
+            </div>
+
+            <div class="thumbnail-item" 
+                 data-scene="04_indoor_statue"
+                 data-src="html/embedded-indoor-statue-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/04_indoor_statue/images/00000000.jpg" alt="Indoor Statue" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Indoor Statue</div>
+            </div>
+            
+            <div class="thumbnail-item" 
+                 data-scene="05_relief_sculpture"
+                 data-src="html/embedded-relief-sculpture-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/05_relief_sculpture/images/00000000.jpg" alt="Relief Sculpture" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Relief Sculpture</div>
+            </div>
+
+            <div class="thumbnail-item" 
+                data-scene="06_tabletop_sculpture"
+                data-src="html/embedded-tabletop-sculpture-viewer.html"
+                onclick="switchIframe(this)">
+                <img src="asset/scenes_images_8scenes/06_tabletop_sculpture/images/00000000.jpg" alt="Tabletop Sculpture" onerror="this.src='assets/placeholder.svg'">
+                <div class="thumbnail-label">Tabletop Sculpture</div>
+            </div>
+            
+            <div class="thumbnail-item" 
+                 data-scene="07_excavator"
+                 data-src="html/embedded-excavator-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/07_excavator/images/00000000.jpg" alt="Excavator" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Excavator</div>
+            </div>
+            
+            <div class="thumbnail-item" 
+                 data-scene="08_camera_object"
+                 data-src="html/embedded-camera-object-viewer.html"
+                 onclick="switchIframe(this)">
+              <img src="asset/scenes_images_8scenes/08_camera_object/images/00000000.jpg" alt="Camera Object" onerror="this.src='assets/placeholder.svg'">
+              <div class="thumbnail-label">Camera Object</div>
+            </div>
+          </div>
+        </div>
+    </section>
+
+
+    <section id="method" class="method">
+        <div class="container">
+            <h2 class="section-title">Method: Lite3R</h2>
+            <div class="method-figure">
+                <img src="asset/images/mainfig_page-0001.jpg" alt="Overall framework of Lite3R">
+            </div>
+            <p class="method-caption">
+                <strong>Overall framework of Lite3R.</strong> Starting from a dense pretrained 3D reconstruction teacher, Lite3R constructs a lite student by replacing dense attention with Sparse Linear Attention, freezing the inherited backbone projections, and training only lightweight linear-branch projection layers under FP8-aware quantization-aware training. Partial attention distillation preserves intermediate geometric priors, and the resulting student is converted to an efficient FP8-compatible deployment model.
+            </p>
+        </div>
+    </section>
+
+
+    <section id="results" class="results">
+        <div class="container">
+            <h2 class="section-title">Results</h2>
+            <div class="results-chart-grid" aria-label="Lite3R quantitative results">
+                <div class="result-chart-card">
+                    <div class="result-chart-title">BlendedMVS: Latency Reduction</div>
+                    <div class="chart-legend result-legend">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-callout latency">1.76&times; faster</div>
+                    <div class="result-callout latency right">1.97&times; faster</div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 80.6%;"><span>483.3</span></div>
+                                <div class="bar lite3r" style="--bar-height: 45.7%;"><span>274.4</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 31.2%;"><span>188.0</span></div>
+                                <div class="bar lite3r" style="--bar-height: 15.9%;"><span>95.3</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Latency (ms)</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title">DTU64: Latency Reduction</div>
+                    <div class="chart-legend result-legend">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-callout latency">1.75&times; faster</div>
+                    <div class="result-callout latency right">1.87&times; faster</div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 80.4%;"><span>482.4</span></div>
+                                <div class="bar lite3r" style="--bar-height: 46.0%;"><span>276.0</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 31.1%;"><span>186.4</span></div>
+                                <div class="bar lite3r" style="--bar-height: 16.6%;"><span>99.5</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Latency (ms)</div>
+                </div>
+
+                <div class="result-chart-card summary-card">
+                    <div class="result-chart-title">Speedup Summary</div>
+                    <div class="baseline-line"></div>
+                    <div class="result-bars four-groups">
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar original" style="--bar-height: 67%;"><span>1.76&times;</span></div></div>
+                            <div class="bar-label">VGGT<br>(BlendedMVS)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar da3" style="--bar-height: 75%;"><span>1.97&times;</span></div></div>
+                            <div class="bar-label">DA3<br>(BlendedMVS)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar original" style="--bar-height: 67%;"><span>1.75&times;</span></div></div>
+                            <div class="bar-label">VGGT<br>(DTU64)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar da3" style="--bar-height: 71%;"><span>1.87&times;</span></div></div>
+                            <div class="bar-label">DA3<br>(DTU64)</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Speedup</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title">BlendedMVS: Memory Reduction</div>
+                    <div class="chart-legend result-legend">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-callout memory">2.32&times; less</div>
+                    <div class="result-callout memory right">1.98&times; less</div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 81.5%;"><span>5706</span></div>
+                                <div class="bar lite3r" style="--bar-height: 35.1%;"><span>2455</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 38.8%;"><span>2713</span></div>
+                                <div class="bar lite3r" style="--bar-height: 19.5%;"><span>1368</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Memory (MB)</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title">DTU64: Memory Reduction</div>
+                    <div class="chart-legend result-legend">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-callout memory">2.33&times; less</div>
+                    <div class="result-callout memory right">1.99&times; less</div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 81.4%;"><span>5701</span></div>
+                                <div class="bar lite3r" style="--bar-height: 35.0%;"><span>2452</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 38.7%;"><span>2709</span></div>
+                                <div class="bar lite3r" style="--bar-height: 19.5%;"><span>1364</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Memory (MB)</div>
+                </div>
+
+                <div class="result-chart-card summary-card">
+                    <div class="result-chart-title">Memory Saving Summary</div>
+                    <div class="baseline-line"></div>
+                    <div class="result-bars four-groups">
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar original" style="--bar-height: 84%;"><span>2.32&times;</span></div></div>
+                            <div class="bar-label">VGGT<br>(BlendedMVS)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar da3" style="--bar-height: 72%;"><span>1.98&times;</span></div></div>
+                            <div class="bar-label">DA3<br>(BlendedMVS)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar original" style="--bar-height: 85%;"><span>2.33&times;</span></div></div>
+                            <div class="bar-label">VGGT<br>(DTU64)</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars single-bar"><div class="bar da3" style="--bar-height: 72%;"><span>1.99&times;</span></div></div>
+                            <div class="bar-label">DA3<br>(DTU64)</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Memory Saving</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title quality-title with-left-legend">Depth Quality: AbsRel</div>
+                    <div class="chart-legend result-legend compact">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 20.7%;"><span>0.0184</span></div>
+                                <div class="bar lite3r" style="--bar-height: 30.5%;"><span>0.0271</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 97.0%;"><span>0.0862</span></div>
+                                <div class="bar lite3r" style="--bar-height: 100%;"><span>0.0889</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">AbsRel (↓)</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title quality-title with-left-legend">Pose Quality: Rotation</div>
+                    <div class="chart-legend result-legend compact">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 18.0%;"><span>1.93</span></div>
+                                <div class="bar lite3r" style="--bar-height: 20.8%;"><span>2.23</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 88.3%;"><span>9.48</span></div>
+                                <div class="bar lite3r" style="--bar-height: 100%;"><span>10.74</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Rotation Error (↓)</div>
+                </div>
+
+                <div class="result-chart-card">
+                    <div class="result-chart-title quality-title">Geometry Quality: F5cm</div>
+                    <div class="chart-legend result-legend">
+                        <span><i class="legend-original"></i> Original</span>
+                        <span><i class="legend-lite3r"></i> <strong>Lite3R</strong></span>
+                    </div>
+                    <div class="result-bars two-groups">
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 98.8%;"><span>0.2005</span></div>
+                                <div class="bar lite3r" style="--bar-height: 100%;"><span>0.2029</span></div>
+                            </div>
+                            <div class="bar-label">VGGT</div>
+                        </div>
+                        <div class="result-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 56.6%;"><span>0.1149</span></div>
+                                <div class="bar lite3r" style="--bar-height: 59.6%;"><span>0.1210</span></div>
+                            </div>
+                            <div class="bar-label">DA3-Large</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">F-score @ 5cm (↑)</div>
+                </div>
+            </div>
+            <p class="results-caption">
+                <strong>Comprehensive visualization of Lite3R main results across nine experimental settings.</strong> The bar charts summarize the key quality and efficiency metrics reported in the main paper, highlighting how Lite3R compares with the corresponding higher-precision baselines across different backbones, datasets, and evaluation dimensions.
+            </p>
+        </div>
+    </section>
+
+
+    <section id="component-ablation" class="component-ablation">
+        <div class="container">
+            <h2 class="section-title">Component Ablation</h2>
+            <div class="ablation-chart-grid" aria-label="Lite3R component ablation results">
+                <div class="ablation-chart-card">
+                    <div class="ablation-chart-title">(a) Quality: Lower is Better</div>
+                    <div class="chart-legend ablation-legend">
+                        <span><i class="legend-original"></i> AbsRel (↓)</span>
+                        <span><i class="legend-rot"></i> Rot./100 (↓)</span>
+                    </div>
+                    <div class="ablation-bars quality-bars">
+                        <div class="ablation-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 100%;"><span>0.0271</span></div>
+                                <div class="bar rot" style="--bar-height: 82.3%;"><span>2.23</span></div>
+                            </div>
+                            <div class="bar-label">Full<br>(SLA+QAT)</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 89.7%;"><span>0.0243</span></div>
+                                <div class="bar rot" style="--bar-height: 80.8%;"><span>2.19</span></div>
+                            </div>
+                            <div class="bar-label">SLA<br>no QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 87.8%;"><span>0.0238</span></div>
+                                <div class="bar rot" style="--bar-height: 79.0%;"><span>2.14</span></div>
+                            </div>
+                            <div class="bar-label">no SLA<br>QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars">
+                                <div class="bar original" style="--bar-height: 67.9%;"><span>0.0184</span></div>
+                                <div class="bar rot" style="--bar-height: 71.2%;"><span>1.93</span></div>
+                            </div>
+                            <div class="bar-label">Original</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Quality Metrics</div>
+                </div>
+
+                <div class="ablation-chart-card">
+                    <div class="ablation-chart-title">(b) Latency: Lower is Better</div>
+                    <div class="ablation-bars ablation-single-bars">
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-full" style="--bar-height: 56.7%;"><span>274ms</span><strong>1.76×</strong></div>
+                            </div>
+                            <div class="bar-label">Full<br>(SLA+QAT)</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-sla" style="--bar-height: 78.1%;"><span>377ms</span><strong>1.28×</strong></div>
+                            </div>
+                            <div class="bar-label">SLA<br>no QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-no-sla" style="--bar-height: 82.8%;"><span>400ms</span><strong>1.21×</strong></div>
+                            </div>
+                            <div class="bar-label">no SLA<br>QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-original" style="--bar-height: 100%;"><span>483ms</span><strong>1.00×</strong></div>
+                            </div>
+                            <div class="bar-label">Original</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Latency (ms)</div>
+                </div>
+
+                <div class="ablation-chart-card">
+                    <div class="ablation-chart-title">(c) Memory: Lower is Better</div>
+                    <div class="ablation-bars ablation-single-bars">
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-full" style="--bar-height: 43.0%;"><span>2455MB</span><strong>2.32×</strong></div>
+                            </div>
+                            <div class="bar-label">Full<br>(SLA+QAT)</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-sla" style="--bar-height: 73.5%;"><span>4196MB</span><strong>1.36×</strong></div>
+                            </div>
+                            <div class="bar-label">SLA<br>no QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-no-sla" style="--bar-height: 53.8%;"><span>3068MB</span><strong>1.86×</strong></div>
+                            </div>
+                            <div class="bar-label">no SLA<br>QAT</div>
+                        </div>
+                        <div class="ablation-bar-group">
+                            <div class="bars single-bar">
+                                <div class="bar ablation-original" style="--bar-height: 100%;"><span>5706MB</span><strong>1.00×</strong></div>
+                            </div>
+                            <div class="bar-label">Original</div>
+                        </div>
+                    </div>
+                    <div class="chart-axis">Memory (MB)</div>
+                </div>
+            </div>
+            <p class="ablation-caption">
+                <strong>Visual comparison of the component-ablation results on VGGT over BlendedMVS.</strong> The chart shows that removing SLA or FP8-aware QAT recovers only part of the final quality-efficiency tradeoff.
+            </p>
+        </div>
+    </section>
+
+
+    <section id="adaptation-sensitivity" class="adaptation-sensitivity">
+        <div class="container">
+            <h2 class="section-title">Adaptation Sensitivity</h2>
+            <div class="adaptation-figure">
+                <img src="asset/images/1.png" alt="Lite3R adaptation sensitivity analysis">
+            </div>
+            <p class="adaptation-caption">
+                <strong>Analysis of Lite3R adaptation sensitivity.</strong> Left: layer-wise quantization sensitivity of VGGT, showing that different backbone stages respond unevenly to low-precision perturbations. Right: change pattern of the linear-branch projection layers during training, illustrating how continued FP8-aware QAT increases drift in the small trainable subspace and helps explain the weaker stability of longer schedules.
+            </p>
+        </div>
+    </section>
+
+
+    <!-- Citation -->
+    <section id="citation" class="citation">
+        <div class="container">
+            <h2 class="section-title">Citation</h2>
+            <div class="citation-box">
+                <pre><code>
+@techreport{lite3r,
+  title={Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction},
+  author={Haoyu Zhang and Zeyu Zhang and Zedong Zhou and Yang Zhao and Hao Tang},
+  journal={Tech Report},
+  year={2026}
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLB Point Viewer</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      #viewer {
+        width: 100%;
+        height: 100%;
+      }
+
+      #status {
+        position: fixed;
+        left: 14px;
+        bottom: 12px;
+        padding: 7px 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.86);
+        color: #334155;
+        font: 13px/1.3 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="viewer"></div>
+    <div id="status">Loading point cloud...</div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+      const container = document.getElementById('viewer');
+      const status = document.getElementById('status');
+      const params = new URLSearchParams(window.location.search);
+      const src = params.get('src') || 'asset/pointcloud_results_8scenes/01_ornate_facade/gt.glb';
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.001, 1000);
+      camera.position.set(0, 0, 3);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      container.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      const loader = new GLTFLoader();
+      loader.load(
+        src,
+        (gltf) => {
+          const root = gltf.scene;
+          const box = new THREE.Box3().setFromObject(root);
+          const center = new THREE.Vector3();
+          const size = new THREE.Vector3();
+          box.getCenter(center);
+          box.getSize(size);
+
+          root.position.sub(center);
+          const maxDim = Math.max(size.x, size.y, size.z) || 1;
+          root.scale.setScalar(2 / maxDim);
+
+          root.traverse((object) => {
+            if (object.isPoints) {
+              object.material = new THREE.PointsMaterial({
+                size: 0.006,
+                vertexColors: true,
+                sizeAttenuation: true
+              });
+            }
+          });
+
+          scene.add(root);
+          controls.target.set(0, 0, 0);
+          controls.update();
+          status.textContent = 'Drag to rotate, scroll to zoom';
+        },
+        undefined,
+        (error) => {
+          console.error(error);
+          status.textContent = 'Failed to load GLB point cloud';
+        }
+      );
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    </script>
+  </body>
+</html>
