@@ -33,8 +33,8 @@ pip install -r requirements.txt
 
 Pre-trained model weights are available on [Hugging Face](https://huggingface.co/AIGeeksGroup/Lite3R):
 
-- `vggt_fp8_qat_1ep.pt` - VGGT with FP8 QAT
-- `da3_fp8_qat_1ep.pt` - DA3-L with FP8 QAT
+- `vggt_fp8_qat_1ep.pt` - Lite3R VGGT
+- `da3_fp8_qat_1ep.pt` - Lite3R DA3-L
 
 Download and place checkpoints in `checkpoints/fp8_qat_1ep/`.
 
