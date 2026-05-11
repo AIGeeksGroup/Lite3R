@@ -2,6 +2,17 @@
 
 Official implementation of **Lite3R**, a model-agnostic framework for efficient feed-forward 3D reconstruction from multi-view images.
 
+> **Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction**
+>
+> Haoyu Zhang\*, [Zeyu Zhang](https://steve-zeyu-zhang.github.io/)\*<sup>†</sup>, Zedong Zhou, Yang Zhao, and [Hao Tang](https://ha0tang.github.io/)<sup>#</sup>
+>
+> \*Equal contribution. <sup>†</sup>Project lead. <sup>#</sup>Corresponding author.
+>
+> ### [Paper](https://arxiv.org/abs/) | [Website](https://aigeeksgroup.github.io/Lite3R/) | [Models](https://huggingface.co/AIGeeksGroup/Lite3R) | [HF Paper](https://huggingface.co/papers/)
+
+<img width="2953" height="827" alt="mainfig_page-0001" src="https://github.com/user-attachments/assets/7667ae19-976f-4956-8b0c-038d9da88ab2" />
+
+
 ## Overview
 
 Lite3R introduces a systematic approach to compress large-scale 3D reconstruction models while maintaining reconstruction quality. The framework combines:
@@ -71,11 +82,11 @@ python eval.py \
 If you find this work useful, please cite:
 
 ```bibtex
-@article{lite3r2025,
+@techreport{lite3r,
   title={Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction},
-  author={Your Name and Collaborators},
-  journal={arXiv preprint},
-  year={2025}
+  author={Haoyu Zhang and Zeyu Zhang and Zedong Zhou and Yang Zhao and Hao Tang},
+  journal={Tech Report},
+  year={2026}
 }
 ```
 
