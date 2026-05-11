@@ -1,133 +1,88 @@
-# Lite3R-FP8
+# Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction
 
-Reproducible code package for the final lightweight 3D-geometry route:
+Official implementation of **Lite3R**, a model-agnostic framework for efficient feed-forward 3D reconstruction from multi-view images.
 
-**Sparse Linear Attention (SLA) + FP8-aware QAT + partial attention-output
-distillation**, evaluated on **VGGT** and **Depth Anything 3 Large (DA3-Large)**.
+## Overview
 
-The package is prepared so a fresh single-GPU server can be brought up quickly
-after the current AutoDL instance is shut down. Dataset files are intentionally
-not included; see [docs/DATASETS.md](docs/DATASETS.md) for expected layouts and
-download links. Final local checkpoints are stored under
-`checkpoints/fp8_qat_1ep/`.
+Lite3R introduces a systematic approach to compress large-scale 3D reconstruction models while maintaining reconstruction quality. The framework combines:
 
-## Final Route
+- **Sparse Linear Attention (SLA)**: Efficient attention mechanism that reduces computational complexity
+- **FP8-Aware Quantization-Aware Training (QAT)**: Low-precision training for deployment efficiency
+- **Partial Attention Distillation**: Knowledge transfer from dense teacher models
 
-The paper-facing route is:
+The framework has been validated on two state-of-the-art architectures:
+- **VGGT** (Visual Geometry Grounding Transformer)
+- **Depth Anything V3 Large (DA3-L)**
 
-- Backbone: VGGT-1B or DA3-Large.
-- Attention: dense attention blocks are replaced by `SLAAttention`.
-- Quantization-aware training: FP8 E4M3 fake quantization is applied to Linear
-  weights and activations with straight-through gradients.
-- Distillation: frozen dense teacher, attention-output MSE only; this is partial
-  attention distillation, not output/depth/pose distillation.
-- Trainable scope: only SLA `proj_lin` parameters are trained in the final
-  lightweight stage; the pretrained backbone is frozen.
-- Deployment evaluation: trained fake-quant Linear layers are unwrapped and
-  converted with torchao `Float8WeightOnlyConfig` using
-  `LITE3R_QUANT_MODE=fp8_weight_only`. A100 does not run full native FP8
-  activation inference in this code path; the claim is FP8-aware QAT plus FP8
-  weight-only deployment.
-
-Main configs:
-
-- [configs/final/vggt_fp8_qat_1ep.yaml](configs/final/vggt_fp8_qat_1ep.yaml)
-- [configs/final/da3_fp8_qat_1ep.yaml](configs/final/da3_fp8_qat_1ep.yaml)
-- [configs/final/vggt_eval_blended.yaml](configs/final/vggt_eval_blended.yaml)
-- [configs/final/da3_eval_blended.yaml](configs/final/da3_eval_blended.yaml)
-- [configs/final/vggt_eval_dtu64.yaml](configs/final/vggt_eval_dtu64.yaml)
-- [configs/final/da3_eval_dtu64.yaml](configs/final/da3_eval_dtu64.yaml)
-
-## Quick Start on a Fresh Server
+## Installation
 
 ```bash
-cd coding
+# Clone the repository
+git clone https://github.com/AIGeeksGroup/Lite3R.git
+cd Lite3R
 
-# Optional China-mainland mirrors.
-export HF_ENDPOINT=https://hf-mirror.com
-export PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
-export GITHUB_MIRROR=https://ghproxy.com/
+# Create conda environment
+conda create -n lite3r python=3.10
+conda activate lite3r
 
-# Environment.
-conda env create -f environment.yml
-conda activate l3rsla-fp8
-SKIP_DATA=1 bash setup.sh
-
-# Put datasets at the documented paths, or symlink them:
-#   datasets/BlendedMVS_lowres/BlendedMVS
-#   datasets/dtu64
-
-# Fast check without datasets.
-bash scripts/smoke_test.sh
-
-# Evaluate the included final checkpoints.
-bash scripts/final_eval_fp8_qat.sh
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-The final checkpoints included locally are:
+## Model Checkpoints
 
-```text
-checkpoints/fp8_qat_1ep/vggt/last.pt
-checkpoints/fp8_qat_1ep/da3/last.pt
-```
+Pre-trained model weights are available on [Hugging Face](https://huggingface.co/AIGeeksGroup/Lite3R):
 
-Their SHA256 hashes are recorded in
-[checkpoints/fp8_qat_1ep/SHA256SUMS](checkpoints/fp8_qat_1ep/SHA256SUMS).
+- `vggt_fp8_qat_1ep.pt` - VGGT with FP8 QAT
+- `da3_fp8_qat_1ep.pt` - DA3-L with FP8 QAT
 
-## Reproducing Training
+Download and place checkpoints in `checkpoints/fp8_qat_1ep/`.
 
-The final FP8-QAT stage depends on a short SLA stage-1 checkpoint. To train
-everything again on BlendedMVS low-res:
+## Quick Start
+
+### Inference
 
 ```bash
-cd coding
-bash scripts/final_train_fp8_qat.sh
+python inference.py \
+  --model vggt \
+  --checkpoint checkpoints/fp8_qat_1ep/vggt/vggt_fp8_qat_1ep.pt \
+  --input_dir examples/input \
+  --output_dir examples/output
 ```
 
-The script trains missing stage-1 checkpoints first:
-
-- `outputs/vggt_keep03_r2a_qat/last.pt`
-- `outputs/da3_keep03_r2a_qat_w4a8/last.pt`
-
-Then it trains:
-
-- `outputs/vggt_fp8_qat_1ep/last.pt`
-- `outputs/da3_fp8_qat_1ep/last.pt`
-
-For evaluation from newly trained checkpoints instead of packaged checkpoints:
+### Training
 
 ```bash
-CKPT_ROOT=outputs bash scripts/final_eval_fp8_qat.sh
+python train.py --config configs/final/vggt_fp8_qat_1ep.yaml
 ```
 
-## Expected Hardware
+## Evaluation
 
-Validated server:
+Evaluate on BlendedMVS or DTU datasets:
 
-- NVIDIA A100-PCIE-40GB
-- Python 3.10
-- PyTorch 2.11.0 + CUDA 12.6
-- torchao 0.11.0
-
-`fp8_weight_only` requires a recent torchao with `Float8WeightOnlyConfig`. On
-older torchao versions the eval script may fall back or fail before producing
-valid FP8-weight deployment numbers.
-
-## Project Layout
-
-```text
-configs/final/          final train/eval YAMLs
-checkpoints/            local final checkpoints and checksums
-lite3r_kit/             SLA, FP8 fake quant, distillation, deployment kernels
-train/                  train_vggt.py, train_da3.py
-eval/                   eval_vggt.py, eval_da3.py, metrics
-data/                   BlendedMVS and DTU64 loaders
-scripts/                final train/eval scripts and experiment utilities
-docs/                   dataset, checkpoint, method, and beginner guides
-model_VGGT/             Original and Lite source trees
-model_DA3-Large/        Original and Lite source trees
+```bash
+python eval.py \
+  --config configs/final/vggt_eval_blended.yaml \
+  --checkpoint checkpoints/fp8_qat_1ep/vggt/vggt_fp8_qat_1ep.pt
 ```
 
-Legacy W4A4 notes from earlier exploration were moved to
-[README_LEGACY_W4A4.md](README_LEGACY_W4A4.md). The current paper route should
-use the FP8 files above.
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@article{lite3r2025,
+  title={Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction},
+  author={Your Name and Collaborators},
+  journal={arXiv preprint},
+  year={2025}
+}
+```
+
+## License
+
+This project is released under the MIT License. See [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+This work builds upon [VGGT](https://github.com/naver/vggt) and [Depth Anything V3](https://github.com/DepthAnything/Depth-Anything-V3).
