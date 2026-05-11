@@ -1,0 +1,49 @@
+# Phase D: VGGT-lite + W4A4 QAT, starting from pretrained dense (NO stage-1
+# init). With our new pipeline stage 1 is just architectural surgery (no
+# training); stage 2 QAT is the only training round. The aim of QAT here is
+# to let proj_lin (BF16, kept un-quantised inside SLAAttention) move from its
+# σ=1e-3 init to a non-zero matrix that compensates W4A4 quant noise in the
+# MLP/head layers. clamp-loss is still in effect (downstream-of-root-cause
+# patch — keeps loss landscape healthy in case scale collapse re-emerges).
+variant: lite_stage2
+output_dir: outputs/vggt_lite_smallinit_w4a4_qat
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  enable_kd: true
+  kd_gamma_max: 0.1   # gentler KD for QAT-only training
+  kd_gamma_min: 0.01
+  weight_bits: 4
+  act_bits: 4
+  group_size: 128
+  quantize_attn_linear: false
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 5
+  lr: 1.0e-5          # lower than stage-1 1e-4: we're doing QAT recovery,
+                      # not learning from scratch
+  weight_decay: 0.05
+  warmup_steps: 100
+  grad_clip: 1.0
+
+log_every: 20
+save_every: 9999
+max_eval_samples: 32

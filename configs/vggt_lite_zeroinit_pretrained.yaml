@@ -1,0 +1,24 @@
+# Eval config for the zero-init pretrained-only lite (no training). Used to
+# confirm that the SLA-modified pretrained weights transfer directly without
+# any retraining. The eval uses the same data + max_eval_samples=32 as our
+# trained-lite runs so the abs_rel is directly comparable to the 0.28 floor.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_zeroinit_pretrained
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false   # the ckpt has the pretrained-with-sla-applied state already
+  keep_ratio: 0.2
+  lambda_init: 0.5
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+max_eval_samples: 32

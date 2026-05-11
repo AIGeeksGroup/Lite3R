@@ -1,0 +1,28 @@
+# Cross-dataset zero-shot eval: Lite3R-VGGT (W4A8 + SLA + Sage smooth_k deploy)
+# trained on BlendedMVS (F_seed42_v2_ckpt.pt — no KD), evaluated on DTU64.
+# DTU64 is pose-only — depth/chamfer metrics will be NaN-filtered.
+# Required env vars at run time:
+#   LITE3R_QUANT_MODE=int4_int8_act  (W4A8 deploy)
+#   LITE3R_SAGE_ATTN=1               (SageAttention INT8 dense at deploy)
+#   LITE3R_SAGE_SMOOTH_K=1           (Sage K-mean smoothing for stability)
+variant: lite_stage2
+output_dir: outputs/vggt_dtu64_lite_sk
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  keep_ratio: 0.3
+  lambda_init: 0.5
+  weight_bits: 4
+  act_bits: 8
+  group_size: 128
+  quantize_attn_linear: true
+data:
+  dataset: dtu64
+  root: datasets/dtu64
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 0
+max_eval_samples: 14

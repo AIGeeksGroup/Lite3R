@@ -1,0 +1,55 @@
+# VGGT Lite Stage-2: W4A4 QAT initialised from Stage-1 SLA checkpoint.
+# img_per_seq=2 to match stage1: even without KD, the fake-quant intermediate
+# tensors plus the SLA topk score tensor (B*S, H, N, N) at S=4 OOMs on 40GB.
+variant: lite_stage2
+output_dir: outputs/vggt_lite_stage2
+init_from_stage1: outputs/vggt_lite_stage1/last.pt
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  # SLA settings (must match Stage-1)
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  # W4A4 settings
+  group_size: 128
+  weight_bits: 4
+  act_bits: 4
+  quantize_attn_linear: false  # set true for fully-W4A4
+  enable_kd: false
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera:
+    weight: 1.0
+    loss_type: l1
+    gamma: 0.6
+    pose_encoding_type: absT_quaR_FoV
+    weight_trans: 1.0
+    weight_rot: 1.0
+    weight_focal: 0.5
+  depth:
+    weight: 1.0
+    gamma: 1.0
+    alpha: 0.2
+    gradient_loss_fn: ""
+    valid_range: 0.95
+
+optim:
+  epochs: 3
+  lr: 2.0e-6
+  weight_decay: 0.05
+  warmup_steps: 50
+  grad_clip: 1.0
+
+log_every: 10
+save_every: 500
+max_eval_samples: 32

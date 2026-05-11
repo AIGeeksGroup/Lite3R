@@ -1,0 +1,19 @@
+variant: lite_stage2
+output_dir: outputs/vggt_dtu64_fp8_qat
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  keep_ratio: 0.3
+  lambda_init: 0.5
+  quant_format: fp8
+  fp8_act_quant: true
+data:
+  dataset: dtu64
+  root: datasets/dtu64
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 0
+max_eval_samples: 14

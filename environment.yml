@@ -1,0 +1,23 @@
+# Optional conda environment file. Use this to reproduce the final FP8 env:
+#   conda env create -f environment.yml
+#   conda activate l3rsla-fp8
+#   bash setup.sh
+#
+# If you prefer system python or another env name, you can skip this file
+# entirely and just `bash setup.sh`, but matching torch/torchao matters for
+# FP8 weight-only deployment.
+name: l3rsla-fp8
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pytorch=2.11.0
+  - torchvision=0.26.0
+  - pytorch-cuda=12.6
+  # Heavy / native-toolchain deps: let pip handle them inside the env so
+  # versions match the torch wheel above.
+  - pip:
+      - -r requirements.txt

@@ -1,0 +1,53 @@
+# Round 1: fix the QAT vs deploy quantisation mismatch.
+# Diagnosis: previous QAT trained with FakeQuantLinear(act_bits=4) but eval/deploy
+# unwraps to torchao INT4 weight-only (no activation quantisation). The model
+# was being trained to compensate A4 noise that doesn't exist at deploy →
+# trained weights are out-of-distribution at inference → PTQ > QAT.
+# Fix: act_bits=16 (qmax=32767, ULP ~1e-5) makes activation fake-quant nearly
+# lossless, matching deploy-time BF16 activations. Now QAT trains under the
+# actual deploy noise (W4-weight-only).
+# Combined with: lr=1e-3 (advisor suggestion: aggressive enough to overcome
+# any quantisation-grain dampening of small param updates), 1 epoch (short
+# burn: enough for proj_lin to move, before training drift dominates),
+# proj_lin out of weight-decay group (already in train/_common.py).
+variant: lite_stage2
+output_dir: outputs/vggt_lite_smallinit_w4a16_qat_1ep_lr1e3
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  enable_kd: true
+  kd_gamma_max: 0.1
+  kd_gamma_min: 0.01
+  weight_bits: 4
+  act_bits: 16        # ← KEY FIX: matches BF16 deploy noise level
+  group_size: 128
+  quantize_attn_linear: false
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 1
+  lr: 1.0e-3
+  weight_decay: 0.05
+  warmup_steps: 30
+  grad_clip: 1.0
+
+log_every: 10
+save_every: 9999
+max_eval_samples: 32

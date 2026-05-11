@@ -1,0 +1,17 @@
+# Cross-dataset zero-shot eval: FP VGGT-1B (HF pretrained, no fine-tune) on DTU64.
+# DTU64 has no GT depth → only pose + efficiency metrics are reported.
+variant: original
+output_dir: outputs/vggt_dtu64_fp
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+data:
+  dataset: dtu64
+  root: datasets/dtu64
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 0
+max_eval_samples: 14

@@ -1,0 +1,23 @@
+# Phase A: VGGT-lite with new small-std init (σ=1e-3 random Gaussian on proj_lin),
+# pretrained-only (no training). Sanity check that the small-std init still
+# preserves near-pretrained quality (target abs_rel ≤ 0.06).
+variant: lite_stage1
+output_dir: outputs/vggt_lite_smallinit_pretrained
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false   # the ckpt already holds the surgery state
+  keep_ratio: 0.2
+  lambda_init: 0.5
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+max_eval_samples: 32

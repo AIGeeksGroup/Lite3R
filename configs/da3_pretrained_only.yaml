@@ -1,0 +1,43 @@
+# DA3-Large pretrained-only reference: load HF weights, skip training, save & eval.
+variant: original
+output_dir: outputs/da3_pretrained_only
+
+model:
+  model_name: da3-large
+  load_pretrained: true
+  pretrained_repo: depth-anything/DA3-LARGE
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera:
+    weight: 1.0
+    loss_type: l1
+    gamma: 0.6
+    pose_encoding_type: absT_quaR_FoV
+    weight_trans: 1.0
+    weight_rot: 1.0
+    weight_focal: 0.5
+  depth:
+    weight: 1.0
+    gamma: 1.0
+    alpha: 0.2
+    gradient_loss_fn: ""
+    valid_range: 0.95
+
+optim:
+  epochs: 0
+  lr: 5.0e-6
+  weight_decay: 0.05
+  warmup_steps: 0
+  grad_clip: 1.0
+
+log_every: 10
+save_every: 500
+max_eval_samples: 32

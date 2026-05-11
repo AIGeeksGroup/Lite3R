@@ -1,0 +1,31 @@
+# Core
+# Validated final FP8 environment:
+#   torch 2.11.0+cu126, torchvision 0.26.0+cu126, torchao 0.11.0
+# Prefer `conda env create -f environment.yml` so CUDA wheels match the server.
+torch>=2.11,<2.12
+torchvision>=0.26,<0.27
+numpy<2
+Pillow
+einops
+safetensors
+huggingface_hub
+PyYAML
+addict
+omegaconf
+
+# VGGT training infra
+iopath
+hydra-core
+wcmatch
+tensorboard
+
+# DA3 deps
+opencv-python
+trimesh
+
+# eval / efficiency
+fvcore
+psutil
+
+# Final FP8 weight-only deployment path.
+torchao>=0.11,<0.12

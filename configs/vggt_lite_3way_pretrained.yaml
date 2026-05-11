@@ -1,0 +1,23 @@
+# 3-way SLA pretrained-only eval (PTQ baseline equivalent under the new arch).
+# Activated via env var LITE3R_SLA_3WAY=1 (set in launcher for both build &
+# eval). Block size 64, kh=5%, kl=10% per paper defaults.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_3way_pretrained
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false
+  keep_ratio: 0.2
+  lambda_init: 0.5
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+max_eval_samples: 32

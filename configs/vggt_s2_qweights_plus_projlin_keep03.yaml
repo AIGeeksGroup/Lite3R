@@ -1,0 +1,45 @@
+# S2: TRUE QAT — train the W4-quantised weights (MLP + heads, all wrapped
+# by FakeQuantLinear) plus proj_lin residual; freeze pretrained-stable
+# attention internals (qkv/q_norm/k_norm/attn proj). This is the cleanest
+# "strict QAT" setup: the param updates land directly on the weights
+# subject to W4 fake-quant in forward.
+variant: lite_stage2
+output_dir: outputs/vggt_s2_qweights_plus_projlin_keep03
+trainable_substrings: ["proj_lin", ".mlp.", "camera_head", "depth_head"]
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.3
+  lambda_init: 0.5
+  enable_kd: false
+  weight_bits: 4
+  act_bits: 16
+  group_size: 128
+  quantize_attn_linear: false
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 1
+  lr: 1.0e-3
+  weight_decay: 0.05
+  warmup_steps: 30
+  grad_clip: 1.0
+
+log_every: 10
+save_every: 9999
+max_eval_samples: 32

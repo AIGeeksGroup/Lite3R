@@ -1,0 +1,41 @@
+# 5ep sweep slot 1: lr=1e-4 (2x clamp_5ep), otherwise identical. Basic lr-bump
+# probe to see if more aggressive learning recovers depth-shape after the
+# clamp fix. clamp_5ep at lr=5e-5 reached 0.280 abs_rel; if 1e-4 drops it to
+# <0.20 we know lr was the limiter.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_stage1_lr1e4_5ep
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  enable_kd: true
+  kd_gamma_max: 0.3
+  kd_gamma_min: 0.03
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 5
+  lr: 1.0e-4
+  weight_decay: 0.05
+  warmup_steps: 100
+  grad_clip: 1.0
+
+log_every: 20
+save_every: 9999
+max_eval_samples: 32

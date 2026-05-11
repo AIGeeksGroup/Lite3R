@@ -1,0 +1,44 @@
+# Critical-path experiment: real SLA with Proj on linear branch + scale-aligned
+# loss + bigger lr. The previous lite training (lr=5e-6, 5ep, lam-mixing) failed
+# to differentiate the two branches because they shared pretrained-softmax qkv;
+# this run lets qkv actually move (lr=5e-5 over 20 epochs) AND uses the new
+# `out = a_topk + proj_lin(a_lin)` formulation that gives the model a learnable
+# bridge between the two attention regimes.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_stage1_proj_lr5e5_20ep
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5      # ignored by new forward; kept for backward-compat
+  enable_kd: true
+  kd_gamma_max: 0.3     # stronger KD (was 0.1) — proj_lin needs richer
+                        # supervision to learn a non-trivial residual
+  kd_gamma_min: 0.03
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 20
+  lr: 5.0e-5            # 10x previous; safe now that loss is scale-aligned
+  weight_decay: 0.05
+  warmup_steps: 200     # longer warmup for higher peak lr
+  grad_clip: 1.0
+
+log_every: 20
+save_every: 9999
+max_eval_samples: 32

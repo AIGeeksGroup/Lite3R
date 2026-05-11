@@ -1,0 +1,41 @@
+# 5ep sweep slot 2: lr=5e-4 (10x clamp_5ep). Aggressive bump per the user's
+# observation that lite training felt under-stepped. With grad_clip=1.0 and
+# warmup=200, we should be safe from immediate divergence; if loss still
+# diverges or NaNs we'll back off.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_stage1_lr5e4_5ep
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  enable_kd: true
+  kd_gamma_max: 0.3
+  kd_gamma_min: 0.03
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 5
+  lr: 5.0e-4
+  weight_decay: 0.05
+  warmup_steps: 200
+  grad_clip: 1.0
+
+log_every: 20
+save_every: 9999
+max_eval_samples: 32

@@ -1,0 +1,21 @@
+# Phase B: DA3-lite with new small-std init, pretrained-only (no training).
+# Verifies the same fix recovers DA3-lite quality across the second backbone.
+variant: lite_stage1
+output_dir: outputs/da3_lite_smallinit_pretrained
+
+model:
+  model_name: da3-large
+  load_pretrained: false   # ckpt already has the surgery state
+  pretrained_repo: depth-anything/DA3-LARGE
+  keep_ratio: 0.2
+  lambda_init: 0.5
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+max_eval_samples: 32

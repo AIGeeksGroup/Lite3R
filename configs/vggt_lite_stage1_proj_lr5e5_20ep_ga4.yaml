@@ -1,0 +1,44 @@
+# Same as vggt_lite_stage1_proj_lr5e5_20ep but with grad_accum=4
+# (effective batch_size = 1 * 4 = 4). Should reduce loss noise materially.
+# Total time ≈ 4× the per-microstep cost / 1 effective step ≈ similar wall
+# time for same TOTAL effective epochs, but each effective epoch is 4× the
+# microsteps so the model takes 4× LESS effective steps. To compensate we
+# bump nominal epochs from 20 → 80 (so effective_epochs = 20 still).
+variant: lite_stage1
+output_dir: outputs/vggt_lite_stage1_proj_lr5e5_20ep_ga4
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  enable_kd: true
+  kd_gamma_max: 0.3
+  kd_gamma_min: 0.03
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+
+optim:
+  epochs: 80           # 4x of 20 — keeps total effective_epochs = 20
+  lr: 5.0e-5
+  weight_decay: 0.05
+  warmup_steps: 800    # 4x of 200 — same fraction of total effective steps
+  grad_clip: 1.0
+  grad_accum: 4        # effective batch = 4
+
+log_every: 40          # 4x — log per ~10 effective steps
+save_every: 9999
+max_eval_samples: 32

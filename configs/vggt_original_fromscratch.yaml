@@ -1,0 +1,46 @@
+# E_SCRATCH: train VGGT-1B on BlendedMVS *from scratch* (no pretrained init).
+# Curiosity probe — 30GB / 1.2B / batch=1 is far from VGGT's real training
+# regime, so we mainly want to see whether loss descends at all in 2 epochs.
+variant: original
+output_dir: outputs/vggt_original_fromscratch
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false   # the only difference from vggt_original
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 4
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+loss:
+  camera:
+    weight: 1.0
+    loss_type: l1
+    gamma: 0.6
+    pose_encoding_type: absT_quaR_FoV
+    weight_trans: 1.0
+    weight_rot: 1.0
+    weight_focal: 0.5
+  depth:
+    weight: 1.0
+    gamma: 1.0
+    alpha: 0.2
+    gradient_loss_fn: ""
+    valid_range: 0.95
+
+optim:
+  epochs: 2
+  lr: 1.0e-4         # typical from-scratch transformer lr; 5e-6 is meaningless on random init
+  weight_decay: 0.05
+  warmup_steps: 200  # longer warmup matters more for random init
+  grad_clip: 1.0
+
+log_every: 10
+save_every: 9999     # final last.pt only (avoid 13GB mid-training ckpts)
+max_eval_samples: 16

@@ -1,0 +1,28 @@
+# Phase C: VGGT-lite + W4A4 PTQ (no training). All MLP/head Linear layers
+# wrapped with FakeQuantLinear(W4A4); SLAAttention internals (qkv/proj/proj_lin)
+# stay BF16 per apply_w4a4(quantize_attn_linear=False). Tells us pure-PTQ
+# degradation on top of stage-1 surgery.
+variant: lite_stage2
+output_dir: outputs/vggt_lite_smallinit_w4a4_ptq
+
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false   # ckpt already has surgery + W4A4 state
+  keep_ratio: 0.2
+  lambda_init: 0.5
+  weight_bits: 4
+  act_bits: 4
+  group_size: 128
+  quantize_attn_linear: false
+
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+
+max_eval_samples: 32

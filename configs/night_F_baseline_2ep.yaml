@@ -1,0 +1,38 @@
+# Variant F: pure R2-A baseline at 2 epoch (NO smooth, NO KD).
+# Isolates whether 2-epoch alone is destructive vs 1-epoch baseline 0.0346.
+variant: lite_stage2
+output_dir: outputs/night_F_baseline_2ep
+trainable_only_proj_lin: true
+init_from_stage1: outputs/vggt_keep03_r2a_qat/last.pt
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: true
+  pretrained_repo: facebook/VGGT-1B
+  keep_ratio: 0.3
+  lambda_init: 0.5
+  enable_kd: false
+  weight_bits: 4
+  act_bits: 8
+  group_size: 128
+  quantize_attn_linear: true
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+loss:
+  camera: {weight: 1.0, loss_type: l1, gamma: 0.6, pose_encoding_type: absT_quaR_FoV, weight_trans: 1.0, weight_rot: 1.0, weight_focal: 0.5}
+  depth:  {weight: 1.0, gamma: 1.0, alpha: 0.2, gradient_loss_fn: "", valid_range: 0.95}
+optim:
+  epochs: 2
+  lr: 1.0e-3
+  weight_decay: 0.05
+  warmup_steps: 60
+  grad_clip: 1.0
+log_every: 10
+save_every: 9999
+max_eval_samples: 32

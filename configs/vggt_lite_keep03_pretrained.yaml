@@ -1,0 +1,18 @@
+# keep_ratio=0.3 sparsity ablation (denser than default 0.2). PTQ-only.
+variant: lite_stage1
+output_dir: outputs/vggt_lite_keep03_pretrained
+model:
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  load_pretrained: false
+  keep_ratio: 0.3
+  lambda_init: 0.5
+data:
+  root: datasets/BlendedMVS_lowres/BlendedMVS
+  use_dummy: false
+  img_per_seq: 2
+  img_size: 518
+  batch_size: 1
+  num_workers: 2
+max_eval_samples: 32
