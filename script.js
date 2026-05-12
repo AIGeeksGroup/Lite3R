@@ -368,6 +368,8 @@ const sceneViewerSlugs = {
     '08_camera_object': 'camera-object'
 };
 
+let sceneViewMode = 'single';
+
 function formatSceneName(sceneId) {
     return sceneId
         .replace(/^\d+_/, '')
@@ -397,10 +399,11 @@ function updateSceneInputViews(sceneId) {
 function updateSceneViewers(sceneId) {
     const sceneSlug = sceneViewerSlugs[sceneId];
     if (!sceneSlug) return;
+    const viewerRoot = sceneViewMode === 'multi' ? 'html_mv' : 'html';
 
     document.querySelectorAll('.scene-viewer-iframe[data-viewer-kind]').forEach((iframe) => {
         const viewerKind = iframe.getAttribute('data-viewer-kind');
-        const nextSrc = `html/embedded-${sceneSlug}-${viewerKind}-viewer.html`;
+        const nextSrc = `${viewerRoot}/embedded-${sceneSlug}-${viewerKind}-viewer.html`;
         if (!iframe.src.endsWith(nextSrc)) {
             iframe.src = nextSrc;
         }
@@ -654,4 +657,31 @@ function initSceneImageZoom() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', initSceneImageZoom);
+function setSceneViewMode(mode) {
+    sceneViewMode = mode === 'multi' ? 'multi' : 'single';
+    const buttons = document.querySelectorAll('.view-mode-button');
+    if (buttons.length >= 2) {
+        buttons[0].classList.toggle('active', sceneViewMode === 'single');
+        buttons[1].classList.toggle('active', sceneViewMode === 'multi');
+    }
+    const activeThumb = document.querySelector('.thumbnail-item.active');
+    if (activeThumb) {
+        const sceneId = activeThumb.getAttribute('data-scene');
+        if (sceneId) {
+            updateSceneViewers(sceneId);
+        }
+    }
+}
+
+function initSceneViewModeButtons() {
+    const buttons = document.querySelectorAll('.view-mode-button');
+    if (buttons.length < 2) return;
+    buttons[0].addEventListener('click', () => setSceneViewMode('single'));
+    buttons[1].addEventListener('click', () => setSceneViewMode('multi'));
+    setSceneViewMode('single');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initSceneImageZoom();
+    initSceneViewModeButtons();
+});

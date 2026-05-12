@@ -1018,6 +1018,35 @@ section {
     text-align: left;
 }
 
+.view-mode-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    max-width: 1200px;
+    margin: 18px auto 8px;
+}
+
+.view-mode-button {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: default;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.view-mode-button.active {
+    background: #4f6ef7;
+    color: #fff;
+    border-color: #4f6ef7;
+    box-shadow: 0 6px 18px rgba(79, 110, 247, 0.18);
+}
+
 .scene-image-strip {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
