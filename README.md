@@ -8,7 +8,7 @@ Official implementation of **Lite3R**, a model-agnostic framework for efficient 
 >
 > \*Equal contribution. <sup>†</sup>Project lead. <sup>#</sup>Corresponding author.
 >
-> ### [Paper](https://arxiv.org/abs/2605.11354) | [Website](https://aigeeksgroup.github.io/Lite3R/) | [Models](https://huggingface.co/AIGeeksGroup/Lite3R) | [HF Paper](https://huggingface.co/papers/)
+> ### [Paper](https://arxiv.org/abs/2605.11354) | [Website](https://aigeeksgroup.github.io/Lite3R/) | [Models](https://huggingface.co/AIGeeksGroup/Lite3R) | [HF Paper](https://huggingface.co/papers/2605.11354)
 
 <img width="2953" height="827" alt="mainfig_page-0001" src="https://github.com/user-attachments/assets/7667ae19-976f-4956-8b0c-038d9da88ab2" />
 
