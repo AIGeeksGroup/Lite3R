@@ -8,7 +8,7 @@ Official implementation of **Lite3R**, a model-agnostic framework for efficient 
 >
 > \*Equal contribution. <sup>†</sup>Project lead. <sup>#</sup>Corresponding author.
 >
-> ### [Paper](https://arxiv.org/abs/) | [Website](https://aigeeksgroup.github.io/Lite3R/) | [Models](https://huggingface.co/AIGeeksGroup/Lite3R) | [HF Paper](https://huggingface.co/papers/)
+> ### [Paper](https://arxiv.org/abs/2605.11354) | [Website](https://aigeeksgroup.github.io/Lite3R/) | [Models](https://huggingface.co/AIGeeksGroup/Lite3R) | [HF Paper](https://huggingface.co/papers/)
 
 <img width="2953" height="827" alt="mainfig_page-0001" src="https://github.com/user-attachments/assets/7667ae19-976f-4956-8b0c-038d9da88ab2" />
 
@@ -82,10 +82,10 @@ python eval.py \
 If you find this work useful, please cite:
 
 ```bibtex
-@techreport{lite3r,
+@article{zhang2026lite3r,
   title={Lite3R: A Model-Agnostic Framework for Efficient Feed-Forward 3D Reconstruction},
-  author={Haoyu Zhang and Zeyu Zhang and Zedong Zhou and Yang Zhao and Hao Tang},
-  journal={Tech Report},
+  author={Zhang, Haoyu and Zhang, Zeyu and Zhou, Zedong and Zhao, Yang and Tang, Hao},
+  journal={arXiv preprint arXiv:2605.11354},
   year={2026}
 }
 ```
