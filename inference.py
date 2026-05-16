@@ -92,22 +92,35 @@ def build_vggt_model(checkpoint_path: Path, device: str) -> torch.nn.Module:
     ckpt = torch.load(checkpoint_path, map_location="cpu")
     state = ckpt.get("model", ckpt)
     model.load_state_dict(state, strict=False)
-    return model.to(device).eval()
+    model = model.to(device).eval()
+
+    # Switch to deployment-time kernels: linear-only SLA + INT4 weight-only,
+    # mirroring eval/eval_vggt.py. Required to avoid the O(N^2) Top-K
+    # branch's >20 GiB activation memory at inference.
+    from lite3r_kit import apply_real_inference_kernels
+    apply_real_inference_kernels(model)
+    return model
 
 
 def build_da3_model(checkpoint_path: Path, device: str) -> torch.nn.Module:
     """Build DA3-L Lite3R model and load checkpoint."""
-    sys.path.insert(0, str(PROJECT_ROOT / "model_DA3-Large" / "Lite" / "src"))
-    from depth_anything_3.api.dav3 import DepthAnything3
+    da3_src = PROJECT_ROOT / "model_DA3-Large" / "Lite" / "src"
+    sys.path.insert(0, str(da3_src))
+    from depth_anything_3.cfg import create_object, load_config
+    from depth_anything_3.registry import MODEL_REGISTRY
     from depth_anything_3.lite3r_apply import apply_sla
 
-    model = DepthAnything3.from_pretrained("depth-anything/Depth-Anything-V3-Large")
-    apply_sla(model, keep_ratio=0.3, lambda_init=0.5)
+    model = create_object(load_config(MODEL_REGISTRY["da3-large"]))
+    apply_sla(model, keep_ratio=0.2, lambda_init=0.5)
 
     ckpt = torch.load(checkpoint_path, map_location="cpu")
     state = ckpt.get("model", ckpt)
     model.load_state_dict(state, strict=False)
-    return model.to(device).eval()
+    model = model.to(device).eval()
+
+    from lite3r_kit import apply_real_inference_kernels
+    apply_real_inference_kernels(model)
+    return model
 
 
 def run_vggt_inference(model, images, device, conf_threshold):
@@ -116,20 +129,19 @@ def run_vggt_inference(model, images, device, conf_threshold):
     from vggt.utils.pose_enc import pose_encoding_to_extri_intri
     from vggt.utils.geometry import unproject_depth_map_to_point_map
 
-    images = images.to(device)
+    images = images.to(device).to(torch.bfloat16)
     with torch.no_grad():
-        with torch.amp.autocast(device, dtype=torch.bfloat16):
-            batch = images[None]
-            tokens, ps_idx = model.aggregator(batch)
-            pose_enc = model.camera_head(tokens)[-1]
-            extr, intr = pose_encoding_to_extri_intri(pose_enc, batch.shape[-2:])
-            depth, depth_conf = model.depth_head(tokens, batch, ps_idx)
+        batch = images[None]
+        tokens, ps_idx = model.aggregator(batch)
+        pose_enc = model.camera_head(tokens)[-1]
+        extr, intr = pose_encoding_to_extri_intri(pose_enc, batch.shape[-2:])
+        depth, depth_conf = model.depth_head(tokens, batch, ps_idx)
 
-    depth = depth.squeeze(0).cpu()
-    depth_conf = depth_conf.squeeze(0).cpu()
-    extr = extr.squeeze(0).cpu()
-    intr = intr.squeeze(0).cpu()
-    images_cpu = images.cpu()
+    depth = depth.squeeze(0).float().cpu()
+    depth_conf = depth_conf.squeeze(0).float().cpu()
+    extr = extr.squeeze(0).float().cpu()
+    intr = intr.squeeze(0).float().cpu()
+    images_cpu = images.float().cpu()
 
     all_points, all_colors = [], []
     for v in range(depth.shape[0]):
@@ -150,26 +162,43 @@ def run_vggt_inference(model, images, device, conf_threshold):
 
 def run_da3_inference(model, images, device, conf_threshold):
     """Run DA3-L inference and produce a fused multi-view point cloud."""
-    images = images.to(device)
+    images = images.to(device).to(torch.bfloat16)
     with torch.no_grad():
-        with torch.amp.autocast(device, dtype=torch.bfloat16):
-            preds = model(images[None])
+        out = model(images[None])
 
-    depth = preds["depth"].squeeze(0).cpu()
-    extr = preds["extrinsics"].squeeze(0).cpu()
-    intr = preds["intrinsics"].squeeze(0).cpu()
-    images_cpu = images.cpu()
+    # DA3 returns an addict.Dict; depth shape (B, S, H, W).
+    depth = out.depth.squeeze(0).float().cpu()           # (S, H, W)
+    extr = out.extrinsics.squeeze(0).float().cpu()       # (S, 3, 4) or (S, 4, 4)
+    intr = out.intrinsics.squeeze(0).float().cpu()       # (S, 3, 3)
+    images_cpu = images.float().cpu()                    # (S, 3, H, W)
 
-    sys.path.insert(0, str(PROJECT_ROOT / "model_VGGT" / "Lite"))
-    from vggt.utils.geometry import unproject_depth_map_to_point_map
+    S, H, W = depth.shape
 
+    # Build per-view camera-frame points via pinhole unprojection.
+    yy, xx = torch.meshgrid(torch.arange(H), torch.arange(W), indexing="ij")
     all_points, all_colors = [], []
-    for v in range(depth.shape[0]):
-        pts = unproject_depth_map_to_point_map(
-            depth[v:v + 1], extr[v:v + 1], intr[v:v + 1]
-        )[0].reshape(-1, 3)
+    for v in range(S):
+        fx, fy = intr[v, 0, 0], intr[v, 1, 1]
+        cx, cy = intr[v, 0, 2], intr[v, 1, 2]
+        z = depth[v]
+        x_cam = (xx - cx) / fx * z
+        y_cam = (yy - cy) / fy * z
+        pts_cam = torch.stack([x_cam, y_cam, z], dim=-1).reshape(-1, 3)
+
+        # Transform to view-0 camera frame using DA3's view-0-relative w2c.
+        E = extr[v]
+        if E.shape[0] == 3:
+            E = torch.cat([E, torch.tensor([[0, 0, 0, 1.0]])], dim=0)
+        try:
+            R = torch.linalg.inv(E)[:3, :3]
+            t = torch.linalg.inv(E)[:3, 3]
+        except RuntimeError:
+            R = torch.linalg.pinv(E)[:3, :3]
+            t = torch.linalg.pinv(E)[:3, 3]
+        pts_world = (pts_cam @ R.t() + t).numpy()
+
         cols = images_cpu[v].numpy().reshape(3, -1).T
-        all_points.append(pts)
+        all_points.append(pts_world)
         all_colors.append(cols)
 
     points = np.vstack(all_points)
