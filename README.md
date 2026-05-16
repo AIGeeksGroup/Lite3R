@@ -58,13 +58,21 @@ python inference.py \
   --model vggt \
   --checkpoint checkpoints/fp8_qat_1ep/vggt/vggt_fp8_qat_1ep.pt \
   --input_dir examples/input \
-  --output_dir examples/output
+  --output examples/output/reconstruction.ply
 ```
 
 ### Training
 
+VGGT backbone:
+
 ```bash
-python train.py --config configs/final/vggt_fp8_qat_1ep.yaml
+python train/train_vggt.py --config configs/final/vggt_fp8_qat_1ep.yaml
+```
+
+DA3-L backbone:
+
+```bash
+python train/train_da3.py --config configs/final/da3_fp8_qat_1ep.yaml
 ```
 
 ## Evaluation
@@ -72,9 +80,10 @@ python train.py --config configs/final/vggt_fp8_qat_1ep.yaml
 Evaluate on BlendedMVS or DTU datasets:
 
 ```bash
-python eval.py \
+python eval/eval_vggt.py \
   --config configs/final/vggt_eval_blended.yaml \
-  --checkpoint checkpoints/fp8_qat_1ep/vggt/vggt_fp8_qat_1ep.pt
+  --ckpt checkpoints/fp8_qat_1ep/vggt/vggt_fp8_qat_1ep.pt \
+  --name vggt_lite3r
 ```
 
 ## Citation
