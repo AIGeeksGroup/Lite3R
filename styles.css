@@ -161,6 +161,18 @@ section {
     opacity: 0.9;
 }
 
+.banner-review {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-weight: 400;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+.banner-review a {
+    color: inherit;
+    text-decoration: none;
+}
+
 .authors {
     font-size: 1.1rem;
     margin-bottom: 40px;
